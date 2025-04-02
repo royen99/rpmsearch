@@ -1,0 +1,17 @@
+version: '3.8'
+services:
+  repo-query:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - REPO_BASE_URL=https://repo9-eu-dcrr.ircqnet.com/pub
+      - RELEASE_API_URL=https://repomirror.ircqnet.com/release
+      - AVAILABLE_REPOS=rhel-8-for-x86_64-baseos-rpms,rhel-8-for-x86_64-appstream-rpms,rhel-9-for-x86_64-baseos-rpms,rhel-9-for-x86_64-appstream-rpms","rhel-8-epel-rpms,rhel-9-epel-rpms,codeready-builder-for-rhel-8-x86_64-rpms,codeready-builder-for-rhel-9-x86_64-rpms
+    ports:
+      - "8001:8000"
+    volumes:
+      - query-cache:/tmp/query_cache
+
+volumes:
+  query-cache:

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>YUM Package Query</title>
+    <!-- Bootstrap CSS -->
+    <link href="{{ request.scope.get('root_path', '') }}/static/css/custom.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="{{ request.scope.get('root_path', '') }}/static/css/fontawesome.min.css" rel="stylesheet">
+    <style>
+        .package-card {
+            border-left: 3px solid #fd7e14;
+            transition: transform 0.2s;
+        }
+        .package-card:hover {
+            transform: translateX(5px);
+        }
+        .version-badge {
+            background-color: #ffc078;
+            color: #495057;
+        }
+        .loading-spinner {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-orange shadow-sm">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-search me-2"></i>Package Query
+            </a>
+            <button class="btn btn-outline-light" data-bs-toggle="modal" data-bs-target="#helpModal">
+                <i class="fas fa-question-circle me-1"></i> Help
+            </button>
+        </div>
+    </nav>
+
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="loading-spinner">
+        <div class="spinner-border text-orange" style="width: 3rem; height: 3rem;" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container my-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card shadow">
+                    <div class="card-header bg-orange text-white">
+                        <h2 class="h4 mb-0"><i class="fas fa-box-open me-2"></i>Package Search</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="searchForm" class="mb-4">
+                            <div class="row g-3">
+                                <div class="col-md-5">
+                                    <label for="packageInput" class="form-label">
+                                        <i class="fas fa-cube me-2"></i>Package Name
+                                    </label>
+                                    <input type="text" class="form-control" id="packageInput" 
+                                           placeholder="e.g. httpd" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="repoSelect" class="form-label">
+                                        <i class="fas fa-archive me-2"></i>Repository
+                                    </label>
+                                    <select class="form-select" id="repoSelect">
+                                        <option value="">All Repositories</option>
+                                        <optgroup label="RHEL 8">
+                                            <option value="rhel-8-for-x86_64-baseos-rpms">BaseOS</option>
+                                            <option value="rhel-8-for-x86_64-appstream-rpms">AppStream</option>
+                                            <option value="rhel-8-epel-rpms">EPEL</option>
+                                            <option value="codeready-builder-for-rhel-8-x86_64-rpms">CodeReady Builder</option>
+                                        </optgroup>
+                                        <optgroup label="RHEL 9">
+                                            <option value="rhel-9-for-x86_64-baseos-rpms">BaseOS</option>
+                                            <option value="rhel-9-for-x86_64-appstream-rpms">AppStream</option>
+                                            <option value="rhel-9-epel-rpms">EPEL</option>
+                                            <option value="codeready-builder-for-rhel-9-x86_64-rpms">CodeReady Builder</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="versionSelect" class="form-label">
+                                        <i class="fas fa-tag me-2"></i>Version
+                                    </label>
+                                    <select class="form-select" id="versionSelect">
+                                        {% for tag, value in versions.items() %}
+                                        <option value="{{ tag }}" {% if tag == default_version %}selected{% endif %}>
+                                            {{ tag }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="exactMatch">
+                                        <label class="form-check-label" for="exactMatch">
+                                            Exact name match
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-orange">
+                                        <i class="fas fa-search me-1"></i> Search Packages
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+
+                        <div id="resultsContainer" style="display: none;">
+                            <h4 class="text-orange mb-3">
+                                <i class="fas fa-list-alt me-2"></i>Results for 
+                                <span id="queryPackageName" class="fw-bold"></span>
+                            </h4>
+                            <div id="packageResults" class="row row-cols-1 row-cols-md-2 g-4"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal fade" id="helpModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-orange text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-question-circle me-2"></i>Package Query Help
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5 class="text-orange">
+                                <i class="fas fa-search me-2"></i>Search Options
+                            </h5>
+                            <ul class="fa-ul">
+                                <li><span class="fa-li"><i class="fas fa-check text-orange"></i></span>
+                                    <strong>Package Name</strong>: Partial or full package name
+                                </li>
+                                <li><span class="fa-li"><i class="fas fa-check text-orange"></i></span>
+                                    <strong>Exact Match</strong>: Check for precise package names
+                                </li>
+                                <li><span class="fa-li"><i class="fas fa-check text-orange"></i></span>
+                                    <strong>Repository</strong>: Filter by specific repository
+                                </li>
+                                <li><span class="fa-li"><i class="fas fa-check text-orange"></i></span>
+                                    <strong>Version</strong>: Select repository snapshot version
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="text-orange">
+                                <i class="fas fa-info-circle me-2"></i>Result Information
+                            </h5>
+                            <ul class="fa-ul">
+                                <li><span class="fa-li"><i class="fas fa-box text-orange"></i></span>
+                                    Package name and version
+                                </li>
+                                <li><span class="fa-li"><i class="fas fa-microchip text-orange"></i></span>
+                                    Architecture
+                                </li>
+                                <li><span class="fa-li"><i class="fas fa-align-left text-orange"></i></span>
+                                    Package summary
+                                </li>
+                                <li><span class="fa-li"><i class="fas fa-server text-orange"></i></span>
+                                    Repository source
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-orange" data-bs-dismiss="modal">
+                        <i class="fas fa-check me-1"></i> Understood
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap & Custom JS -->
+    <script src="{{ request.scope.get('root_path', '') }}/static/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize Bootstrap components
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+
+        // Form submission handler
+        document.getElementById('searchForm').addEventListener('submit', async (e) => {
+            e.preventDefault()
+            
+            const packageName = document.getElementById('packageInput').value.trim()
+            const repo = document.getElementById('repoSelect').value
+            const version = document.getElementById('versionSelect').value
+            const exactMatch = document.getElementById('exactMatch').checked
+            
+            if (!packageName) return
+            
+            showLoading()
+            document.getElementById('resultsContainer').style.display = 'none'
+            
+            try {
+                const response = await fetch(
+                    `{{ request.scope.get('root_path', '') }}/api/search?` +
+                    `package=${encodeURIComponent(packageName)}` +
+                    `${repo ? `&repo=${repo}` : ''}` +
+                    `${version ? `&version=${version}` : ''}` +
+                    `&exact_match=${exactMatch}`
+                )
+                
+                if (!response.ok) {
+                    throw new Error(await response.text())
+                }
+                
+                const data = await response.json()
+                displayResults(data)
+            } catch (error) {
+                console.error('Search failed:', error)
+                document.getElementById('packageResults').innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            ${error.message || 'Failed to fetch package information'}
+                        </div>
+                    </div>`
+                document.getElementById('resultsContainer').style.display = 'block'
+            } finally {
+                hideLoading()
+            }
+        })
+
+        // Display results
+        function displayResults(data) {
+            const container = document.getElementById('packageResults')
+            container.innerHTML = ''
+            
+            document.getElementById('queryPackageName').textContent = data.query
+            document.getElementById('resultsContainer').style.display = 'block'
+            
+            if (data.results.length === 0) {
+                container.innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No packages found matching "${data.query}"
+                        </div>
+                    </div>`
+                return
+            }
+            
+            data.results.forEach(result => {
+                const pkg = result.package
+                container.innerHTML += `
+                    <div class="col">
+                        <div class="card package-card h-100">
+                            <div class="card-header bg-orange text-white">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>${pkg.name}</span>
+                                    <span class="badge bg-dark">${result.repo.split('-').slice(0, 2).join(' ')}</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="badge bg-secondary">${pkg.arch || 'noarch'}</span>
+                                    <span class="badge version-badge">
+                                        ${pkg.version.ver || '?'}-${pkg.version.rel || '?'}
+                                    </span>
+                                </div>
+                                <p class="card-text">${pkg.summary || 'No summary available'}</p>
+                                ${pkg.description ? 
+                                    `<p class="text-muted small mt-2">${pkg.description}</p>` : 
+                                    ''}
+                            </div>
+                            <div class="card-footer bg-transparent">
+                                <small class="text-muted">
+                                    <i class="fas fa-database me-1"></i>
+                                    ${result.repo.replace(/-/g, ' ')}
+                                    ${data.version ? ` (${data.version})` : ''}
+                                </small>
+                            </div>
+                        </div>
+                    </div>`
+            })
+        }
+
+        // Loading indicators
+        function showLoading() {
+            document.getElementById('loadingSpinner').style.display = 'block'
+            document.querySelector('#searchForm button[type="submit"]').disabled = true
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingSpinner').style.display = 'none'
+            document.querySelector('#searchForm button[type="submit"]').disabled = false
+        }
+    </script>
+</body>
+</html>

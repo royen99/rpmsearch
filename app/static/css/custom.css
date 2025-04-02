@@ -1,0 +1,37 @@
+/* Same orange theme as RepoDiff */
+:root {
+    --orange-primary: #fd7e14;
+    --orange-light: #ffc078;
+    --orange-dark: #e8590c;
+}
+
+.bg-orange {
+    background-color: var(--orange-primary) !important;
+}
+
+.btn-orange {
+    background-color: var(--orange-primary);
+    border-color: var(--orange-primary);
+    color: white;
+}
+
+.btn-orange:hover {
+    background-color: var(--orange-dark);
+    border-color: var(--orange-dark);
+    color: white;
+}
+
+/* Package result cards */
+.package-card {
+    border-left: 3px solid var(--orange-primary);
+    transition: transform 0.2s;
+}
+
+.package-card:hover {
+    transform: translateX(5px);
+}
+
+.version-badge {
+    background-color: var(--orange-light);
+    color: #495057;
+}
