@@ -4,10 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>YUM Package Query</title>
-    <!-- Bootstrap CSS -->
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- ING Orange Theme -->
     <link href="{{ request.scope.get('root_path', '') }}/static/css/custom.css" rel="stylesheet">
     <!-- Font Awesome -->
-    <link href="{{ request.scope.get('root_path', '') }}/static/css/fontawesome.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         .package-card {
             border-left: 3px solid #fd7e14;
@@ -74,6 +76,11 @@
                                     </label>
                                     <select class="form-select" id="repoSelect">
                                         <option value="">All Repositories</option>
+                                        <optgroup label="RHEL 7">
+                                            <option value="rhel-7-server-els-rpms">Base</option>
+                                            <option value="rhel-7-server-els-optional-rpms">Optionals</option>
+                                            <option value="rhel-7-epel-rpms">EPEL</option>
+                                        </optgroup>
                                         <optgroup label="RHEL 8">
                                             <option value="rhel-8-for-x86_64-baseos-rpms">BaseOS</option>
                                             <option value="rhel-8-for-x86_64-appstream-rpms">AppStream</option>
@@ -86,11 +93,16 @@
                                             <option value="rhel-9-epel-rpms">EPEL</option>
                                             <option value="codeready-builder-for-rhel-9-x86_64-rpms">CodeReady Builder</option>
                                         </optgroup>
+                                        <optgroup label="RHEL 10">
+                                            <option value="rhel-10-for-x86_64-baseos-beta-rpms">BaseOS</option>
+                                            <option value="rhel-10-for-x86_64-appstream-beta-rpms">AppStream</option>
+                                            <option value="codeready-builder-beta-for-rhel-10-x86_64-rpms">CodeReady Builder</option>
+                                        </optgroup>
                                     </select>
                                 </div>
                                 <div class="col-md-3">
                                     <label for="versionSelect" class="form-label">
-                                        <i class="fas fa-tag me-2"></i>Version
+                                        <i class="fas fa-tag me-2"></i>Release
                                     </label>
                                     <select class="form-select" id="versionSelect">
                                         {% for tag, value in versions.items() %}
@@ -101,8 +113,8 @@
                                     </select>
                                 </div>
                                 <div class="col-12">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="exactMatch">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="exactMatch" checked>
                                         <label class="form-check-label" for="exactMatch">
                                             Exact name match
                                         </label>
@@ -129,13 +141,13 @@
         </div>
     </div>
 
-    <!-- Help Modal -->
-    <div class="modal fade" id="helpModal" tabindex="-1" aria-hidden="true">
+    <!-- RPM Search Help Modal -->
+    <div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-orange text-white">
-                    <h5 class="modal-title">
-                        <i class="fas fa-question-circle me-2"></i>Package Query Help
+                    <h5 class="modal-title" id="helpModalLabel">
+                        <i class="fas fa-search me-2"></i>RPM Package Search Help
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -143,42 +155,86 @@
                     <div class="row">
                         <div class="col-md-6">
                             <h5 class="text-orange">
-                                <i class="fas fa-search me-2"></i>Search Options
+                                <i class="fas fa-keyboard me-2"></i>Search Options
                             </h5>
+                            <p>
+                                Find packages across all repository releases with flexible search options:
+                            </p>
                             <ul class="fa-ul">
-                                <li><span class="fa-li"><i class="fas fa-check text-orange"></i></span>
-                                    <strong>Package Name</strong>: Partial or full package name
-                                </li>
-                                <li><span class="fa-li"><i class="fas fa-check text-orange"></i></span>
-                                    <strong>Exact Match</strong>: Check for precise package names
-                                </li>
-                                <li><span class="fa-li"><i class="fas fa-check text-orange"></i></span>
-                                    <strong>Repository</strong>: Filter by specific repository
-                                </li>
-                                <li><span class="fa-li"><i class="fas fa-check text-orange"></i></span>
-                                    <strong>Version</strong>: Select repository snapshot version
-                                </li>
+                                <li><span class="fa-li"><i class="fas fa-check-circle text-orange"></i></span><strong>Exact Match</strong>: Find packages with exact name matches</li>
+                                <li><span class="fa-li"><i class="fas fa-check-circle text-orange"></i></span><strong>Partial Match</strong>: Find all packages containing your search term</li>
+                                <li><span class="fa-li"><i class="fas fa-check-circle text-orange"></i></span>Search is case-insensitive (e.g. "HTTPD" = "httpd")</li>
                             </ul>
                         </div>
                         <div class="col-md-6">
                             <h5 class="text-orange">
-                                <i class="fas fa-info-circle me-2"></i>Result Information
+                                <i class="fas fa-filter me-2"></i>Filters
                             </h5>
+                            <p>
+                                Narrow your search results with these filters:
+                            </p>
                             <ul class="fa-ul">
-                                <li><span class="fa-li"><i class="fas fa-box text-orange"></i></span>
-                                    Package name and version
-                                </li>
-                                <li><span class="fa-li"><i class="fas fa-microchip text-orange"></i></span>
-                                    Architecture
-                                </li>
-                                <li><span class="fa-li"><i class="fas fa-align-left text-orange"></i></span>
-                                    Package summary
-                                </li>
-                                <li><span class="fa-li"><i class="fas fa-server text-orange"></i></span>
-                                    Repository source
-                                </li>
+                                <li><span class="fa-li"><i class="fas fa-check-circle text-orange"></i></span><strong>Repository</strong>: Search specific repositories</li>
+                                <li><span class="fa-li"><i class="fas fa-check-circle text-orange"></i></span><strong>Release</strong>: Search specific patch releases</li>
+                                <li><span class="fa-li"><i class="fas fa-check-circle text-orange"></i></span>Leave filter blank to search all repositories</li>
                             </ul>
                         </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h5 class="text-orange">
+                                <i class="fas fa-archive me-2"></i>Repository Types
+                            </h5>
+                            <p>
+                                Search across these different repository types:
+                            </p>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th>Repository</th>
+                                            <th>Description</th>
+                                            <th>Release Tags</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>BaseOS</strong></td>
+                                            <td>Core system packages and dependencies</td>
+                                            <td>Monthly, Weekly, Nightly</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>AppStream</strong></td>
+                                            <td>Additional application packages</td>
+                                            <td>Monthly, Weekly, Nightly</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>EPEL</strong></td>
+                                            <td>Extra Packages for Enterprise Linux</td>
+                                            <td>Monthly, Weekly, Nightly</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>CodeReady</strong></td>
+                                            <td>Development tools and libraries</td>
+                                            <td>Monthly, Nightly</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Tip:</strong> Results are cached for faster searching. Identical searches will return instantly.
+                    </div>
+                    
+                    <div class="alert alert-warning mt-2">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Note:</strong> Package versions shown reflect the repository state at the time of the release tag.
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -191,7 +247,7 @@
     </div>
 
     <!-- Bootstrap & Custom JS -->
-    <script src="{{ request.scope.get('root_path', '') }}/static/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Initialize Bootstrap components
         const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
@@ -225,24 +281,59 @@
                 if (!response.ok) {
                     throw new Error(await response.text())
                 }
-                
-                const data = await response.json()
-                displayResults(data)
+
+                const data = await response.json();
+                const resultsContainer = document.getElementById('resultsContainer');
+                resultsContainer.innerHTML = '';
+
+                if (data.results.length === 0) {
+                    resultsContainer.innerHTML = '<div class="alert alert-info">No packages found</div>';
+                } else {
+                    data.results.forEach(result => {
+                        const resultDiv = document.createElement('div');
+                        resultDiv.className = 'card mb-3';
+                        
+                        // Handle both exact and partial match results
+                        const packagesToShow = exactMatch ? 
+                            [result.package] : 
+                            result.matches;
+                        
+                        resultDiv.innerHTML = `
+                            <div class="card-header">
+                                Repository: ${result.repo}
+                                ${!exactMatch ? `<span class="badge bg-secondary ms-2">${result.match_count} matches</span>` : ''}
+                                ${result.version_tag ? `<span class="badge bg-info ms-2">${result.version_tag}</span>` : ''}
+                            </div>
+                            <div class="card-body">
+                                ${packagesToShow.map(pkg => `
+                                    <div class="package-result mb-2">
+                                        <h5>${pkg.name}</h5>
+                                        <div class="text-muted">${pkg.summary}</div>
+                                        <div class="package-details mt-2">
+                                            <span class="badge bg-primary">${pkg.arch}</span>
+                                            <span class="badge badge-custom-orange ms-2">v${pkg.version.ver}-${pkg.version.rel}</span>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                        
+                        resultsContainer.appendChild(resultDiv);
+                    });
+                }
+
+                document.getElementById('resultsContainer').style.display = 'block';
+                hideLoading();
             } catch (error) {
-                console.error('Search failed:', error)
-                document.getElementById('packageResults').innerHTML = `
-                    <div class="col-12">
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            ${error.message || 'Failed to fetch package information'}
-                        </div>
-                    </div>`
-                document.getElementById('resultsContainer').style.display = 'block'
-            } finally {
-                hideLoading()
+                document.getElementById('resultsContainer').innerHTML = `
+                    <div class="alert alert-danger">
+                        Error: ${error.message}
+                    </div>
+                `;
+                document.getElementById('resultsContainer').style.display = 'block';
+                hideLoading();
             }
         })
-
         // Display results
         function displayResults(data) {
             const container = document.getElementById('packageResults')

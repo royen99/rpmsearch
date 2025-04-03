@@ -35,3 +35,34 @@
     background-color: var(--orange-light);
     color: #495057;
 }
+
+.form-switch .form-check-input {
+    width: 2.5em;
+    height: 1.5em;
+}
+.package-result {
+    padding: 1rem;
+    border-bottom: 1px solid #eee;
+}
+.package-result:last-child {
+    border-bottom: none;
+}
+
+.badge-custom-orange {
+    background-color: #e8590c;
+    color: white;
+}
+
+.all-versions {
+    border-top: 1px solid #eee;
+    padding-top: 1rem;
+    margin-top: 1rem;
+}
+.all-versions .list-group-item {
+    padding: 0.75rem 1.25rem;
+    border-left: none;
+    border-right: none;
+}
+.all-versions .list-group-item:first-child {
+    border-top: none;
+}
